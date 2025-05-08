@@ -2,31 +2,47 @@ import cv2
 import tkinter as tk
 from tkinter import *
 from PIL import Image, ImageTk
+from ultralytics import YOLO
+import numpy as np
 
-# Create main window
+# YOLOv8 model path
+model = YOLO("YOLOv8_best.pt")  
+
+# Main window
 window = Tk()
-window.title("Pineapple Fiber Grade Detection")
+window.title("Pineapple Grade Detection")
 window.configure(bg='black')
 
 # Set up camera
 cap = cv2.VideoCapture(0)
 
-# Update video frame
+# Video frame
 def update_frame():
+    global current_frame
     ret, frame = cap.read()
     if ret:
-        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-        img = Image.fromarray(frame)
+        current_frame = frame.copy()
+        frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(frame_rgb)
         imgtk = ImageTk.PhotoImage(image=img)
         video_label.imgtk = imgtk
         video_label.configure(image=imgtk)
     video_label.after(10, update_frame)
 
-# Function for detect button 
+# Detect button
 def detect():
-    print("Pineapple Result Detection")
+    if current_frame is not None:
+        results = model(current_frame)[0]  
+        annotated_frame = results.plot()  
 
-#  Quit the program
+        # Display in the GUI
+        frame_rgb = cv2.cvtColor(annotated_frame, cv2.COLOR_BGR2RGB)
+        img = Image.fromarray(frame_rgb)
+        imgtk = ImageTk.PhotoImage(image=img)
+        video_label.imgtk = imgtk
+        video_label.configure(image=imgtk)
+
+# Quit the program
 def quit_app():
     cap.release()
     window.destroy()
@@ -43,6 +59,9 @@ detect_btn.pack(pady=10)
 
 quit_btn = Button(button_frame, text="EXIT", bg='red', fg='white', width=15, height=3, command=quit_app)
 quit_btn.pack(pady=10)
+
+
+current_frame = None
 
 # Video
 update_frame()
